@@ -22,13 +22,9 @@ const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 // --- EMBEDDED TEAM DATA FROM TEAMS.JSON WITH ADDED LOGOS ---
 const INITIAL_TEAMS = [
-  { "id": "ACU", "name": "Abilene Christian", "conf": "UAC", "div": "FCS", "color": "#4F2170", "lat": 32.4697, "lng": -99.7081, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/2000.png" },
   { "id": "USAF", "name": "Air Force", "conf": "Mountain West", "div": "FBS", "color": "#003087", "lat": 38.9984, "lng": -104.8618, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/2005.png" },
   { "id": "AKRN", "name": "Akron", "conf": "MAC", "div": "FBS", "color": "#041E42", "lat": 41.0708, "lng": -81.5106, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/2006.png" },
   { "id": "BAMA", "name": "Alabama", "conf": "SEC", "div": "FBS", "color": "#9E1B32", "lat": 33.2098, "lng": -87.5692, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/333.png" },
-  { "id": "AAMU", "name": "Alabama A&M", "conf": "SWAC", "div": "FCS", "color": "#660000", "lat": 34.7836, "lng": -86.5723, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/2010.png" },
-  { "id": "ALST", "name": "Alabama State", "conf": "SWAC", "div": "FCS", "color": "#000000", "lat": 32.3639, "lng": -86.2952, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/2011.png" },
-  { "id": "ALB", "name": "Albany", "conf": "CAA", "div": "FCS", "color": "#46166B", "lat": 42.6841, "lng": -73.8247, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/399.png" },
   { "id": "APST", "name": "Appalachian State", "conf": "Sun Belt", "div": "FBS", "color": "#222222", "lat": 36.2114, "lng": -81.6853, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/2026.png" },
   { "id": "ZONA", "name": "Arizona", "conf": "Big 12", "div": "FBS", "color": "#CC0033", "lat": 32.2285, "lng": -110.9488, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/12.png" },
   { "id": "AZST", "name": "Arizona State", "conf": "Big 12", "div": "FBS", "color": "#8C1D40", "lat": 33.4264, "lng": -111.9326, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/9.png" },
