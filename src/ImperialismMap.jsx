@@ -5,8 +5,20 @@ import {
   Play, Pause, ChevronRight, ChevronLeft, Upload, Save, RotateCcw, 
   Trophy, Map as MapIcon, Info, Globe, FileText, Download, Sparkles, 
   ScrollText, Search, ZoomIn, ZoomOut, Maximize, Eye, EyeOff, Image as ImageIcon,
-  Users, Layers, Loader
+  Users, Layers, Loader, Lock, Unlock, Trash2
 } from 'lucide-react';
+
+// --- FIREBASE IMPORTS ---
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
+import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
+
+// --- FIREBASE SETUP ---
+const firebaseConfig = JSON.parse(__firebase_config);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 // --- EMBEDDED TEAM DATA FROM TEAMS.JSON WITH ADDED LOGOS ---
 const INITIAL_TEAMS = [
@@ -211,6 +223,10 @@ export default function CFBImperialismMap() {
   const svgRef = useRef(null);
   const mapGroupRef = useRef(null);
   const zoomRef = useRef(null);
+
+  // Auth & Admin State
+  const [user, setUser] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false); // Client-side admin toggle
   
   // Gemini AI State
   const [aiReport, setAiReport] = useState(null);
@@ -221,6 +237,46 @@ export default function CFBImperialismMap() {
 
   // API Key
   const apiKey = ""; 
+
+  // --- FIREBASE AUTH & DATA LOADING ---
+  
+  // 1. Auth Init
+  useEffect(() => {
+    const initAuth = async () => {
+      if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+        await signInWithCustomToken(auth, __initial_auth_token);
+      } else {
+        await signInAnonymously(auth);
+      }
+    };
+    initAuth();
+    
+    const unsubscribe = onAuthStateChanged(auth, setUser);
+    return () => unsubscribe();
+  }, []);
+
+  // 2. Data Sync
+  useEffect(() => {
+    if (!user) return;
+
+    // Use Public Data Path so everyone sees the same map
+    const gamesCollection = collection(db, 'artifacts', appId, 'public', 'data', 'games');
+    
+    // Subscribe to updates
+    const unsubscribe = onSnapshot(gamesCollection, (snapshot) => {
+      const loadedGames = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      // Sort in memory as per "No Complex Queries" rule
+      loadedGames.sort((a, b) => a.week - b.week);
+      setGames(loadedGames);
+    }, (error) => {
+      console.error("Error fetching games:", error);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
 
   // Load Topology and Teams
   useEffect(() => {
@@ -673,18 +729,55 @@ export default function CFBImperialismMap() {
     }
   };
 
-  const handleAddGame = () => {
+  const handleToggleAdmin = () => {
+    if (isAdmin) {
+      setIsAdmin(false);
+    } else {
+      const pin = prompt("Enter Commissioner PIN to enable editing:");
+      if (pin === "simcfb") { // Simple client-side check for this prototype
+        setIsAdmin(true);
+      } else if (pin !== null) {
+        alert("Incorrect PIN.");
+      }
+    }
+  };
+
+  const handleAddGame = async () => {
     if (newGameWinner === newGameLoser) return;
+    if (!user) return;
+
     const newGame = {
       week: Math.max(...games.map(g => g.week), 0) + 1,
       winner: newGameWinner,
       loser: newGameLoser
     };
-    setGames([...games, { ...newGame, week: Math.max(...games.map(g => g.week), 0) }]); 
+
+    try {
+      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'games'), newGame);
+    } catch (e) {
+      console.error("Error adding game: ", e);
+      alert("Failed to save game. Check console.");
+    }
   };
 
-  const handleReset = () => {
-    setGames([]);
+  const handleDeleteGame = async (gameId) => {
+    if (!user || !gameId) return;
+    if (confirm("Are you sure you want to delete this game record?")) {
+      try {
+        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId));
+      } catch (e) {
+        console.error("Error deleting game: ", e);
+      }
+    }
+  };
+
+  const handleReset = async () => {
+    if (!confirm("WARNING: This will delete ALL games from the database. Are you sure?")) return;
+    // Note: In a real app, you'd use a cloud function or batch delete. 
+    // Here we will just delete visible ones one by one (safe for small datasets).
+    for (const game of games) {
+       if (game.id) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', game.id));
+    }
     setCurrentWeek(0);
     setAiReport(null);
   };
@@ -694,12 +787,21 @@ export default function CFBImperialismMap() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const text = event.target.result;
       const newGames = parseCSV(text, teams); // Pass teams to parser
       if (newGames.length > 0) {
-         setGames(prev => [...prev, ...newGames]);
-         alert(`Imported ${newGames.length} games successfully!`);
+         // Batch add to firestore
+         let addedCount = 0;
+         for (const g of newGames) {
+            try {
+               await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'games'), g);
+               addedCount++;
+            } catch(e) {
+               console.error("Error adding game from CSV", e);
+            }
+         }
+         alert(`Imported ${addedCount} games successfully!`);
       } else {
          alert("Could not parse games. Ensure CSV format is: Week,Winner,Loser");
       }
@@ -896,6 +998,9 @@ export default function CFBImperialismMap() {
              <button onClick={() => setShowControls(!showControls)} className={`p-1.5 rounded ${showControls ? 'bg-slate-600 text-white' : 'text-slate-400 hover:text-white'}`} title="Toggle Timeline">
                {showControls ? <Maximize className="w-4 h-4 rotate-45"/> : <Maximize className="w-4 h-4"/>}
              </button>
+             <button onClick={handleToggleAdmin} className={`p-1.5 rounded ${isAdmin ? 'bg-green-600 text-white' : 'text-slate-400 hover:text-white'}`} title="Commissioner Mode">
+               {isAdmin ? <Unlock className="w-4 h-4"/> : <Lock className="w-4 h-4"/>}
+             </button>
           </div>
 
           <div className="relative group">
@@ -1078,84 +1183,94 @@ export default function CFBImperialismMap() {
               </button>
             </div>
 
-            <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
-               <h3 className="text-sm font-bold text-blue-800 mb-2 flex items-center">
-                 <FileText className="w-4 h-4 mr-2" /> Import Games (CSV)
-               </h3>
-               <p className="text-xs text-blue-600 mb-3">
-                 Format: <code className="bg-blue-100 px-1 rounded">Week, Winner, Loser</code>
-               </p>
-               <label className="block">
-                 <input 
-                   type="file" 
-                   accept=".csv"
-                   ref={fileInputRef}
-                   onChange={handleFileUpload}
-                   className="block w-full text-xs text-slate-500
-                     file:mr-4 file:py-2 file:px-4
-                     file:rounded-full file:border-0
-                     file:text-xs file:font-semibold
-                     file:bg-blue-600 file:text-white
-                     hover:file:bg-blue-700
-                   "
-                 />
-               </label>
-            </div>
-
-            <div className="mb-8 p-4 bg-slate-50 rounded-lg border border-slate-100">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="text-sm font-bold text-slate-700 flex items-center">
-                  <Upload className="w-4 h-4 mr-2" /> Add Single Result
+            {!isAdmin ? (
+               <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-100 text-center">
+                  <Lock className="w-8 h-8 mx-auto text-gray-400 mb-2"/>
+                  <h3 className="text-sm font-bold text-gray-700">Commissioner Access Only</h3>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Editing is locked to prevent unauthorized changes. 
+                    <button onClick={handleToggleAdmin} className="text-blue-600 hover:underline ml-1">Unlock with PIN</button>
+                  </p>
+               </div>
+            ) : (
+              <>
+              <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-100">
+                <h3 className="text-sm font-bold text-green-800 mb-2 flex items-center">
+                  <Unlock className="w-4 h-4 mr-2" /> Commissioner Mode Active
                 </h3>
-                <button 
-                  onClick={askOracle}
-                  disabled={isAiLoading}
-                  className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded border border-purple-200 hover:bg-purple-200 flex items-center"
-                >
-                  {isAiLoading ? "Thinking..." : <><Sparkles className="w-3 h-3 mr-1" /> Ask Oracle</>}
-                </button>
-              </div>
-              
-              <div className="space-y-3">
-                <div className="flex space-x-2">
-                  <div className="flex-1">
-                    <label className="block text-xs font-medium text-slate-500 mb-1">Winner</label>
-                    <select 
-                      className="w-full p-2 text-sm border rounded bg-white"
-                      value={newGameWinner}
-                      onChange={(e) => setNewGameWinner(e.target.value)}
+                <div className="mb-4">
+                  <label className="block text-xs font-semibold text-green-700 mb-1">Import Games (CSV)</label>
+                  <input 
+                    type="file" 
+                    accept=".csv"
+                    ref={fileInputRef}
+                    onChange={handleFileUpload}
+                    className="block w-full text-xs text-slate-500
+                      file:mr-4 file:py-2 file:px-4
+                      file:rounded-full file:border-0
+                      file:text-xs file:font-semibold
+                      file:bg-green-600 file:text-white
+                      hover:file:bg-green-700
+                    "
+                  />
+                  <p className="text-[10px] text-green-600 mt-1">Format: <code>Week, Winner, Loser</code></p>
+                </div>
+                
+                <div className="pt-2 border-t border-green-200">
+                  <h3 className="text-xs font-bold text-green-700 mb-2">Manual Entry</h3>
+                  <div className="space-y-3">
+                    <div className="flex space-x-2">
+                      <div className="flex-1">
+                        <label className="block text-[10px] font-medium text-green-600 mb-1">Winner</label>
+                        <select 
+                          className="w-full p-2 text-sm border rounded bg-white"
+                          value={newGameWinner}
+                          onChange={(e) => setNewGameWinner(e.target.value)}
+                        >
+                          {teams.sort((a,b) => a.name.localeCompare(b.name)).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                        </select>
+                      </div>
+                      
+                      <div className="flex-1">
+                        <label className="block text-[10px] font-medium text-green-600 mb-1">Loser</label>
+                        <select 
+                          className="w-full p-2 text-sm border rounded bg-white"
+                          value={newGameLoser}
+                          onChange={(e) => setNewGameLoser(e.target.value)}
+                        >
+                          {teams.sort((a,b) => a.name.localeCompare(b.name)).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                        </select>
+                      </div>
+                    </div>
+
+                    <button 
+                      onClick={handleAddGame}
+                      className="w-full py-2 bg-green-600 text-white rounded text-sm font-medium hover:bg-green-700 transition flex justify-center items-center"
                     >
-                      {teams.sort((a,b) => a.name.localeCompare(b.name)).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                    </select>
-                  </div>
-                  
-                  <div className="flex-1">
-                    <label className="block text-xs font-medium text-slate-500 mb-1">Loser</label>
-                    <select 
-                      className="w-full p-2 text-sm border rounded bg-white"
-                      value={newGameLoser}
-                      onChange={(e) => setNewGameLoser(e.target.value)}
+                      <Save className="w-4 h-4 mr-1" /> Add Result
+                    </button>
+
+                    <button 
+                      onClick={askOracle}
+                      disabled={isAiLoading}
+                      className="w-full text-xs bg-purple-100 text-purple-700 px-2 py-2 rounded border border-purple-200 hover:bg-purple-200 flex justify-center items-center"
                     >
-                      {teams.sort((a,b) => a.name.localeCompare(b.name)).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                    </select>
+                      {isAiLoading ? "Thinking..." : <><Sparkles className="w-3 h-3 mr-1" /> Ask Oracle Prediction</>}
+                    </button>
                   </div>
                 </div>
-
-                <button 
-                  onClick={handleAddGame}
-                  className="w-full py-2 bg-green-600 text-white rounded text-sm font-medium hover:bg-green-700 transition flex justify-center items-center"
-                >
-                  <Save className="w-4 h-4 mr-1" /> Record Win
-                </button>
               </div>
-            </div>
+              </>
+            )}
 
             <div className="space-y-4">
               <div className="flex justify-between items-center border-b pb-2">
                  <h3 className="text-sm font-bold text-slate-700">History Log</h3>
-                 <button onClick={handleReset} className="text-xs text-red-500 hover:text-red-700 flex items-center">
-                    <RotateCcw className="w-3 h-3 mr-1" /> Reset
-                 </button>
+                 {isAdmin && (
+                   <button onClick={handleReset} className="text-xs text-red-500 hover:text-red-700 flex items-center">
+                      <RotateCcw className="w-3 h-3 mr-1" /> Clear All
+                   </button>
+                 )}
               </div>
 
               <div className="bg-amber-50 border border-amber-200 rounded p-3 mb-4">
@@ -1182,7 +1297,7 @@ export default function CFBImperialismMap() {
                   const winner = teams.find(t => t.id === g.winner);
                   const loser = teams.find(t => t.id === g.loser);
                   return (
-                    <div key={i} className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded shadow-sm">
+                    <div key={i} className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded shadow-sm group">
                       <div className="flex items-center space-x-2">
                          <span className="text-xs font-mono text-slate-400 w-8">W{g.week}</span>
                          <div className="flex flex-col">
@@ -1190,6 +1305,11 @@ export default function CFBImperialismMap() {
                             <span className="text-xs text-slate-400">def. {loser?.name || g.loser}</span>
                          </div>
                       </div>
+                      {isAdmin && (
+                        <button onClick={() => handleDeleteGame(g.id)} className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   );
                 })}
