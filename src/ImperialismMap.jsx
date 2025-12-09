@@ -43,6 +43,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 // --- FULL TEAM DATA (FBS + FCS) ---
+// Updated based on 2026 realignment data provided
 const ALL_TEAMS = [
   // --- FBS TEAMS (With Logos) ---
   { "id": "USAF", "name": "Air Force", "conf": "Mountain West", "div": "FBS", "color": "#003087", "lat": 38.9984, "lng": -104.8618, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/2005.png" },
@@ -68,7 +69,7 @@ const ALL_TEAMS = [
   { "id": "CLEM", "name": "Clemson", "conf": "ACC", "div": "FBS", "color": "#F56600", "lat": 34.6788, "lng": -82.8432, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/228.png" },
   { "id": "CCU", "name": "Coastal Carolina", "conf": "Sun Belt", "div": "FBS", "color": "#006991", "lat": 33.7928, "lng": -79.0167, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/324.png" },
   { "id": "COLO", "name": "Colorado", "conf": "Big 12", "div": "FBS", "color": "#CFB87C", "lat": 40.0095, "lng": -105.2669, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/38.png" },
-  { "id": "CSU", "name": "Colorado State", "conf": "Mountain West", "div": "FBS", "color": "#1E4D2B", "lat": 40.5734, "lng": -105.0865, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/36.png" },
+  { "id": "CSU", "name": "Colorado State", "conf": "Pac-12", "div": "FBS", "color": "#1E4D2B", "lat": 40.5734, "lng": -105.0865, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/36.png" },
   { "id": "CONN", "name": "UConn", "conf": "Independent", "div": "FBS", "color": "#000E2F", "lat": 41.8077, "lng": -72.2540, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/41.png" },
   { "id": "DEL", "name": "Delaware", "conf": "C-USA", "div": "FBS", "color": "#00539F", "lat": 39.6780, "lng": -75.7507, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/48.png" },
   { "id": "DUKE", "name": "Duke", "conf": "ACC", "div": "FBS", "color": "#003087", "lat": 35.9953, "lng": -78.9417, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/150.png" },
@@ -78,7 +79,7 @@ const ALL_TEAMS = [
   { "id": "FLA", "name": "Florida", "conf": "SEC", "div": "FBS", "color": "#0021A5", "lat": 29.6499, "lng": -82.3486, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/57.png" },
   { "id": "FAU", "name": "Florida Atlantic", "conf": "American", "div": "FBS", "color": "#003366", "lat": 26.3754, "lng": -80.1014, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/2226.png" },
   { "id": "FSU", "name": "Florida State", "conf": "ACC", "div": "FBS", "color": "#782F40", "lat": 30.4363, "lng": -84.2982, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/52.png" },
-  { "id": "FRES", "name": "Fresno State", "conf": "Mountain West", "div": "FBS", "color": "#DB0032", "lat": 36.8093, "lng": -119.7456, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/278.png" },
+  { "id": "FRES", "name": "Fresno State", "conf": "Pac-12", "div": "FBS", "color": "#DB0032", "lat": 36.8093, "lng": -119.7456, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/278.png" },
   { "id": "UGA", "name": "Georgia", "conf": "SEC", "div": "FBS", "color": "#BA0C2F", "lat": 33.9498, "lng": -83.3734, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/61.png" },
   { "id": "GASO", "name": "Georgia Southern", "conf": "Sun Belt", "div": "FBS", "color": "#002D72", "lat": 32.4208, "lng": -81.7894, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/290.png" },
   { "id": "GAST", "name": "Georgia State", "conf": "Sun Belt", "div": "FBS", "color": "#0039A6", "lat": 33.7531, "lng": -84.3853, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/2247.png" },
@@ -139,7 +140,7 @@ const ALL_TEAMS = [
   { "id": "RICE", "name": "Rice", "conf": "American", "div": "FBS", "color": "#00205B", "lat": 29.7174, "lng": -95.4018, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/242.png" },
   { "id": "RUTG", "name": "Rutgers", "conf": "Big Ten", "div": "FBS", "color": "#CC0033", "lat": 40.5138, "lng": -74.4648, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/164.png" },
   { "id": "SHSU", "name": "Sam Houston State", "conf": "C-USA", "div": "FBS", "color": "#F26F26", "lat": 30.7137, "lng": -95.5468, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/2534.png" },
-  { "id": "SDSU", "name": "San Diego State", "conf": "Mountain West", "div": "FBS", "color": "#A6192E", "lat": 32.7844, "lng": -117.1228, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/21.png" },
+  { "id": "SDSU", "name": "San Diego State", "conf": "Pac-12", "div": "FBS", "color": "#A6192E", "lat": 32.7844, "lng": -117.1228, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/21.png" },
   { "id": "SJSU", "name": "San Jose State", "conf": "Mountain West", "div": "FBS", "color": "#0055A2", "lat": 37.3352, "lng": -121.8811, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/23.png" },
   { "id": "SMU", "name": "SMU", "conf": "ACC", "div": "FBS", "color": "#354CA1", "lat": 32.8405, "lng": -96.7818, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/2567.png" },
   { "id": "USA", "name": "South Alabama", "conf": "Sun Belt", "div": "FBS", "color": "#00205B", "lat": 30.6954, "lng": -88.1740, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/6.png" },
@@ -180,6 +181,14 @@ const ALL_TEAMS = [
   { "id": "WMU", "name": "Western Michigan", "conf": "MAC", "div": "FBS", "color": "#B58500", "lat": 42.2831, "lng": -85.6139, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/2711.png" },
   { "id": "WISC", "name": "Wisconsin", "conf": "Big Ten", "div": "FBS", "color": "#C5050C", "lat": 43.0698, "lng": -89.4127, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/275.png" },
   { "id": "WYOM", "name": "Wyoming", "conf": "Mountain West", "div": "FBS", "color": "#492F24", "lat": 41.3144, "lng": -105.5669, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/2751.png" },
+  { "id": "SSU", "name": "Sacramento State", "conf": "Independent", "div": "FCS", "color": "#00563F", "lat": 38.5635, "lng": -121.4253, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/16.png" },
+  { "id": "MRMK", "name": "Merrimack", "conf": "Independent", "div": "FCS", "color": "#00205B", "lat": 42.6678, "lng": -71.1223, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/2771.png" },
+  { "id": "SHU", "name": "Sacred Heart", "conf": "Independent", "div": "FCS", "color": "#C90E38", "lat": 41.2227, "lng": -73.2422, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/2529.png" },
+  { "id": "CONN", "name": "UConn", "conf": "Independent", "div": "FBS", "color": "#000E2F", "lat": 41.8077, "lng": -72.2540, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/41.png" },
+  { "id": "MASS", "name": "UMass", "conf": "MAC", "div": "FBS", "color": "#881C1C", "lat": 42.3868, "lng": -72.5301, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/113.png" },
+  { "id": "DEL", "name": "Delaware", "conf": "C-USA", "div": "FBS", "color": "#00539F", "lat": 39.6780, "lng": -75.7507, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/48.png" },
+  { "id": "MOST", "name": "Missouri State", "conf": "C-USA", "div": "FBS", "color": "#5E0009", "lat": 37.1994, "lng": -93.2804, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/2623.png" },
+  { "id": "KNSW", "name": "Kennesaw State", "conf": "C-USA", "div": "FBS", "color": "#FFC629", "lat": 34.0382, "lng": -84.5827, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/338.png" },
   
   // --- FCS TEAMS (From teams.json) ---
   { "id": "ACU", "name": "Abilene Christian", "conf": "UAC", "div": "FCS", "color": "#4F2170", "lat": 32.4697, "lng": -99.7081, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/2000.png" },
@@ -271,7 +280,7 @@ const ALL_TEAMS = [
   { "id": "URI", "name": "Rhode Island", "conf": "CAA", "div": "FCS", "color": "#68ABE5", "lat": 41.4854, "lng": -71.5303, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/227.png" },
   { "id": "RICH", "name": "Richmond", "conf": "Patriot", "div": "FCS", "color": "#9E0712", "lat": 37.5756, "lng": -77.5385, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/257.png" },
   { "id": "RMU", "name": "Robert Morris", "conf": "NEC", "div": "FCS", "color": "#002664", "lat": 40.5218, "lng": -80.2227, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/2523.png" },
-  { "id": "SSU", "name": "Sacramento State", "conf": "Big Sky", "div": "FCS", "color": "#00563F", "lat": 38.5635, "lng": -121.4253, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/16.png" },
+  { "id": "SSU", "name": "Sacramento State", "conf": "Independent", "div": "FCS", "color": "#00563F", "lat": 38.5635, "lng": -121.4253, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/16.png" },
   { "id": "SHU", "name": "Sacred Heart", "conf": "Independent", "div": "FCS", "color": "#C90E38", "lat": 41.2227, "lng": -73.2422, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/2529.png" },
   { "id": "SFPA", "name": "Saint Francis (PA)", "conf": "NEC", "div": "FCS", "color": "#C8102E", "lat": 40.5057, "lng": -78.6364, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/2598.png" },
   { "id": "SAM", "name": "Samford", "conf": "SoCon", "div": "FCS", "color": "#003366", "lat": 33.4643, "lng": -86.7909, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/2535.png" },
