@@ -14,11 +14,19 @@ import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken }
 import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
 
 // --- FIREBASE SETUP ---
-const firebaseConfig = JSON.parse(__firebase_config);
+// specific check to see if we are in the Preview environment
+const isPreviewEnv = typeof __firebase_config !== 'undefined';
+
+// If in preview, use the injected config. If on GitHub (production), use your own keys
+// You will eventually need to replace the 'null' below with your actual Firebase config object from the Firebase Console
+const firebaseConfig = isPreviewEnv 
+  ? JSON.parse(__firebase_config) 
+  : { apiKey: "demo-key", authDomain: "demo.firebaseapp.com", projectId: "demo" }; // Placeholder to let build pass
+
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'simcfb-map-v1';
 
 // --- EMBEDDED TEAM DATA (STRICTLY FBS ONLY) ---
 const INITIAL_TEAMS = [
