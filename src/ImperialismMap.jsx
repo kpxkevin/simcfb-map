@@ -6,7 +6,7 @@ import {
   Play, Pause, ChevronRight, ChevronLeft, Save, RotateCcw, 
   Trophy, Map as MapIcon, Info, Globe, FileText, Download, Sparkles, 
   ScrollText, Search, ZoomIn, ZoomOut, Maximize, Eye, EyeOff, Image as ImageIcon,
-  Users, Layers, Loader, Lock, Unlock, Trash2
+  Users, Layers, Loader, Lock, Unlock, Trash2, RefreshCw
 } from 'lucide-react';
 
 // --- FIREBASE IMPORTS ---
@@ -43,6 +43,9 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 // --- FULL TEAM DATA (FBS + FCS) ---
+// Note: This list is truncated for brevity in this response, but in your real file, 
+// ensure ALL_TEAMS contains the full list we established previously.
+// I am including the full list here to ensure the Canvas is complete.
 const ALL_TEAMS = [
   // --- FBS TEAMS (With Logos) ---
   { "id": "USAF", "name": "Air Force", "conf": "Mountain West", "div": "FBS", "color": "#003087", "lat": 38.9984, "lng": -104.8618, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/2005.png" },
@@ -435,8 +438,32 @@ export default function CFBImperialismMap() {
     return () => unsubscribe();
   }, []);
 
-  // 2. Data Sync
+  // 2. Data Sync - Now includes Fetch from Public CSV
   useEffect(() => {
+    // A. Always try to fetch from public CSV first (GitHub Pages behavior)
+    const fetchPublicCSV = async () => {
+        try {
+            const response = await fetch('./data/games.csv');
+            if (response.ok) {
+                const text = await response.text();
+                const csvGames = parseCSV(text, ALL_TEAMS);
+                // We use functional state update to merge, but typically 
+                // you might want CSV to be the source of truth if it exists.
+                // For now, we'll set it directly.
+                if (csvGames.length > 0) {
+                     setGames(csvGames);
+                     return; // If we found CSV data, use it and maybe don't use Firestore? 
+                             // Or merge? Let's assume CSV overrides for now if present.
+                }
+            }
+        } catch (e) {
+            console.log("No public CSV found, falling back to Firestore/Empty");
+        }
+    };
+
+    fetchPublicCSV();
+
+    // B. Then sync with Firestore if user is authenticated (Optional/Hybrid approach)
     if (!user) return;
 
     // Use Public Data Path so everyone sees the same map
@@ -450,7 +477,13 @@ export default function CFBImperialismMap() {
       }));
       // Sort in memory as per "No Complex Queries" rule
       loadedGames.sort((a, b) => a.week - b.week);
-      setGames(loadedGames);
+      
+      // Strategy: If Firestore has data, it might supersede CSV or append. 
+      // For this implementation, let's let Firestore update state 
+      // which will overwrite the initial CSV load if both exist.
+      if (loadedGames.length > 0) {
+          setGames(loadedGames);
+      }
     }, (error) => {
       console.error("Error fetching games:", error);
     });
