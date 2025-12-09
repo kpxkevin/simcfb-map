@@ -5,7 +5,7 @@ import {
   Play, Pause, ChevronRight, ChevronLeft, Upload, Save, RotateCcw, 
   Trophy, Map as MapIcon, Info, Globe, FileText, Download, Sparkles, 
   ScrollText, Search, ZoomIn, ZoomOut, Maximize, Eye, EyeOff, Image as ImageIcon,
-  Users, Layers, Loader, Lock, Unlock, Trash2
+  Users, Layers, Loader, Lock, Unlock, Trash2, RefreshCw
 } from 'lucide-react';
 
 // --- FIREBASE IMPORTS ---
@@ -14,12 +14,10 @@ import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken }
 import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
 
 // --- FIREBASE SETUP (BUILD SAFE) ---
-// This logic prevents the build from failing on GitHub where sandbox variables are missing.
 let firebaseConfig;
 let appId;
 
 try {
-  // Check if we are in the Preview Environment (Sandbox)
   // eslint-disable-next-line no-undef
   if (typeof __firebase_config !== 'undefined') {
     // eslint-disable-next-line no-undef
@@ -30,9 +28,6 @@ try {
     throw new Error('Sandbox config not found');
   }
 } catch (e) {
-  // FALLBACK FOR GITHUB ACTIONS / PRODUCTION
-  // The build will use these placeholders to compile successfully.
-  // Note: Database features won't work on the live site until you add your real config here.
   firebaseConfig = { 
     apiKey: "demo-key", 
     authDomain: "demo.firebaseapp.com", 
@@ -48,8 +43,10 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// --- EMBEDDED TEAM DATA (STRICTLY FBS ONLY) ---
-const INITIAL_TEAMS = [
+// --- FULL TEAM DATA (FBS + FCS) ---
+// Merged list: FBS teams have logos, FCS teams are from your uploaded file.
+const ALL_TEAMS = [
+  // --- FBS TEAMS (With Logos) ---
   { "id": "USAF", "name": "Air Force", "conf": "Mountain West", "div": "FBS", "color": "#003087", "lat": 38.9984, "lng": -104.8618, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/2005.png" },
   { "id": "AKRN", "name": "Akron", "conf": "MAC", "div": "FBS", "color": "#041E42", "lat": 41.0708, "lng": -81.5106, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/2006.png" },
   { "id": "BAMA", "name": "Alabama", "conf": "SEC", "div": "FBS", "color": "#9E1B32", "lat": 33.2098, "lng": -87.5692, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/333.png" },
@@ -184,7 +181,137 @@ const INITIAL_TEAMS = [
   { "id": "WKU", "name": "Western Kentucky", "conf": "C-USA", "div": "FBS", "color": "#F32026", "lat": 36.9856, "lng": -86.4552, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/98.png" },
   { "id": "WMU", "name": "Western Michigan", "conf": "MAC", "div": "FBS", "color": "#B58500", "lat": 42.2831, "lng": -85.6139, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/2711.png" },
   { "id": "WISC", "name": "Wisconsin", "conf": "Big Ten", "div": "FBS", "color": "#C5050C", "lat": 43.0698, "lng": -89.4127, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/275.png" },
-  { "id": "WYOM", "name": "Wyoming", "conf": "Mountain West", "div": "FBS", "color": "#492F24", "lat": 41.3144, "lng": -105.5669, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/2751.png" }
+  { "id": "WYOM", "name": "Wyoming", "conf": "Mountain West", "div": "FBS", "color": "#492F24", "lat": 41.3144, "lng": -105.5669, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/2751.png" },
+  
+  // --- FCS TEAMS (From teams.json) ---
+  { "id": "ACU", "name": "Abilene Christian", "conf": "UAC", "div": "FCS", "color": "#4F2170", "lat": 32.4697, "lng": -99.7081 },
+  { "id": "AAMU", "name": "Alabama A&M", "conf": "SWAC", "div": "FCS", "color": "#660000", "lat": 34.7836, "lng": -86.5723 },
+  { "id": "ALST", "name": "Alabama State", "conf": "SWAC", "div": "FCS", "color": "#000000", "lat": 32.3639, "lng": -86.2952 },
+  { "id": "ALB", "name": "Albany", "conf": "CAA", "div": "FCS", "color": "#46166B", "lat": 42.6841, "lng": -73.8247 },
+  { "id": "ALCN", "name": "Alcorn State", "conf": "SWAC", "div": "FCS", "color": "#46166B", "lat": 31.8741, "lng": -91.1396 },
+  { "id": "UAPB", "name": "Arkansas-Pine Bluff", "conf": "SWAC", "div": "FCS", "color": "#000000", "lat": 34.2464, "lng": -92.0198 },
+  { "id": "APSU", "name": "Austin Peay", "conf": "UAC", "div": "FCS", "color": "#8E0B0B", "lat": 36.5332, "lng": -87.3533 },
+  { "id": "BCU", "name": "Bethune-Cookman", "conf": "SWAC", "div": "FCS", "color": "#6F263D", "lat": 29.2120, "lng": -81.0315 },
+  { "id": "BRWN", "name": "Brown", "conf": "Ivy League", "div": "FCS", "color": "#4E3629", "lat": 41.8268, "lng": -71.4025 },
+  { "id": "BRY", "name": "Bryant", "conf": "CAA", "div": "FCS", "color": "#000000", "lat": 41.9213, "lng": -71.5369 },
+  { "id": "BUCK", "name": "Bucknell", "conf": "Patriot", "div": "FCS", "color": "#003865", "lat": 40.9547, "lng": -76.8835 },
+  { "id": "BUT", "name": "Butler", "conf": "Pioneer", "div": "FCS", "color": "#0C2340", "lat": 39.8407, "lng": -86.1713 },
+  { "id": "CP", "name": "Cal Poly", "conf": "Big Sky", "div": "FCS", "color": "#154734", "lat": 35.3050, "lng": -120.6625 },
+  { "id": "CAMP", "name": "Campbell", "conf": "CAA", "div": "FCS", "color": "#FF7F00", "lat": 35.4093, "lng": -78.7397 },
+  { "id": "CARK", "name": "Central Arkansas", "conf": "UAC", "div": "FCS", "color": "#4F2683", "lat": 35.0772, "lng": -92.4582 },
+  { "id": "CCSU", "name": "Central Connecticut", "conf": "NEC", "div": "FCS", "color": "#1A4784", "lat": 41.6934, "lng": -72.7634 },
+  { "id": "CHSO", "name": "Charleston Southern", "conf": "Big South-OVC", "div": "FCS", "color": "#A6935C", "lat": 32.9818, "lng": -80.0718 },
+  { "id": "UTC", "name": "Chattanooga", "conf": "SoCon", "div": "FCS", "color": "#003865", "lat": 35.0456, "lng": -85.3097 },
+  { "id": "CIT", "name": "The Citadel", "conf": "SoCon", "div": "FCS", "color": "#3975B7", "lat": 32.7972, "lng": -79.9616 },
+  { "id": "COLG", "name": "Colgate", "conf": "Patriot", "div": "FCS", "color": "#821019", "lat": 42.8186, "lng": -75.5428 },
+  { "id": "COLU", "name": "Columbia", "conf": "Ivy League", "div": "FCS", "color": "#9BCBEB", "lat": 40.8075, "lng": -73.9626 },
+  { "id": "COR", "name": "Cornell", "conf": "Ivy League", "div": "FCS", "color": "#B31B1B", "lat": 42.4534, "lng": -76.4735 },
+  { "id": "DART", "name": "Dartmouth", "conf": "Ivy League", "div": "FCS", "color": "#00693E", "lat": 43.7022, "lng": -72.2896 },
+  { "id": "DAV", "name": "Davidson", "conf": "Pioneer", "div": "FCS", "color": "#AC1A2F", "lat": 35.5008, "lng": -80.8447 },
+  { "id": "DAY", "name": "Dayton", "conf": "Pioneer", "div": "FCS", "color": "#CE1141", "lat": 39.7406, "lng": -84.1792 },
+  { "id": "DSU", "name": "Delaware State", "conf": "MEAC", "div": "FCS", "color": "#0099CC", "lat": 39.1862, "lng": -75.5423 },
+  { "id": "DRKE", "name": "Drake", "conf": "Pioneer", "div": "FCS", "color": "#003366", "lat": 41.6022, "lng": -93.6528 },
+  { "id": "DUQ", "name": "Duquesne", "conf": "NEC", "div": "FCS", "color": "#041E42", "lat": 40.4359, "lng": -79.9904 },
+  { "id": "ETSU", "name": "East Tennessee State", "conf": "SoCon", "div": "FCS", "color": "#041E42", "lat": 36.3013, "lng": -82.3697 },
+  { "id": "ETAM", "name": "East Texas A&M", "conf": "Southland", "div": "FCS", "color": "#0033A0", "lat": 33.2415, "lng": -95.9102 },
+  { "id": "EIU", "name": "Eastern Illinois", "conf": "Big South-OVC", "div": "FCS", "color": "#003087", "lat": 39.4795, "lng": -88.1755 },
+  { "id": "EKU", "name": "Eastern Kentucky", "conf": "UAC", "div": "FCS", "color": "#4D191D", "lat": 37.7314, "lng": -84.3011 },
+  { "id": "EWU", "name": "Eastern Washington", "conf": "Big Sky", "div": "FCS", "color": "#A10022", "lat": 47.4912, "lng": -117.5831 },
+  { "id": "ELON", "name": "Elon", "conf": "CAA", "div": "FCS", "color": "#B59461", "lat": 36.1026, "lng": -79.5052 },
+  { "id": "FAMU", "name": "Florida A&M", "conf": "SWAC", "div": "FCS", "color": "#F05023", "lat": 30.4277, "lng": -84.2866 },
+  { "id": "FOR", "name": "Fordham", "conf": "Patriot", "div": "FCS", "color": "#860038", "lat": 40.8624, "lng": -73.8860 },
+  { "id": "FUR", "name": "Furman", "conf": "SoCon", "div": "FCS", "color": "#582C83", "lat": 34.9254, "lng": -82.4395 },
+  { "id": "WEBB", "name": "Gardner-Webb", "conf": "Big South-OVC", "div": "FCS", "color": "#BA0C2F", "lat": 35.2530, "lng": -81.6669 },
+  { "id": "GEOT", "name": "Georgetown", "conf": "Patriot", "div": "FCS", "color": "#003865", "lat": 38.9076, "lng": -77.0723 },
+  { "id": "GRAM", "name": "Grambling", "conf": "SWAC", "div": "FCS", "color": "#000000", "lat": 32.5204, "lng": -92.7126 },
+  { "id": "HAMP", "name": "Hampton", "conf": "CAA", "div": "FCS", "color": "#0033A0", "lat": 37.0223, "lng": -76.3356 },
+  { "id": "HARV", "name": "Harvard", "conf": "Ivy League", "div": "FCS", "color": "#A51C30", "lat": 42.3659, "lng": -71.1278 },
+  { "id": "HC", "name": "Holy Cross", "conf": "Patriot", "div": "FCS", "color": "#602D89", "lat": 42.2393, "lng": -71.8080 },
+  { "id": "HCU", "name": "Houston Christian", "conf": "Southland", "div": "FCS", "color": "#003087", "lat": 29.6953, "lng": -95.5158 },
+  { "id": "HOW", "name": "Howard", "conf": "MEAC", "div": "FCS", "color": "#003087", "lat": 38.9227, "lng": -77.0194 },
+  { "id": "IDHO", "name": "Idaho", "conf": "Big Sky", "div": "FCS", "color": "#F1B300", "lat": 46.7262, "lng": -117.0101 },
+  { "id": "IDST", "name": "Idaho State", "conf": "Big Sky", "div": "FCS", "color": "#F47920", "lat": 42.8617, "lng": -112.4343 },
+  { "id": "ILST", "name": "Illinois State", "conf": "MVFC", "div": "FCS", "color": "#CE1141", "lat": 40.5097, "lng": -88.9959 },
+  { "id": "UIW", "name": "Incarnate Word", "conf": "Southland", "div": "FCS", "color": "#CE1141", "lat": 29.4695, "lng": -98.4716 },
+  { "id": "INST", "name": "Indiana State", "conf": "MVFC", "div": "FCS", "color": "#003366", "lat": 39.4697, "lng": -87.4116 },
+  { "id": "JXST", "name": "Jackson State", "conf": "SWAC", "div": "FCS", "color": "#00205B", "lat": 32.2965, "lng": -90.2096 },
+  { "id": "LAF", "name": "Lafayette", "conf": "Patriot", "div": "FCS", "color": "#800000", "lat": 40.7018, "lng": -75.2078 },
+  { "id": "LAM", "name": "Lamar", "conf": "Southland", "div": "FCS", "color": "#CE1141", "lat": 30.0409, "lng": -94.0743 },
+  { "id": "LEH", "name": "Lehigh", "conf": "Patriot", "div": "FCS", "color": "#653819", "lat": 40.6053, "lng": -75.3776 },
+  { "id": "LIN", "name": "Lindenwood", "conf": "Big South-OVC", "div": "FCS", "color": "#000000", "lat": 38.7845, "lng": -90.5037 },
+  { "id": "LIU", "name": "LIU", "conf": "NEC", "div": "FCS", "color": "#69B3E7", "lat": 40.8173, "lng": -73.6009 },
+  { "id": "ME", "name": "Maine", "conf": "CAA", "div": "FCS", "color": "#003263", "lat": 44.9015, "lng": -68.6687 },
+  { "id": "MRST", "name": "Marist", "conf": "Pioneer", "div": "FCS", "color": "#C8102E", "lat": 41.7226, "lng": -73.9341 },
+  { "id": "MCN", "name": "McNeese", "conf": "Southland", "div": "FCS", "color": "#00529B", "lat": 30.2132, "lng": -93.2140 },
+  { "id": "MER", "name": "Mercer", "conf": "SoCon", "div": "FCS", "color": "#E57200", "lat": 32.8298, "lng": -83.6508 },
+  { "id": "MRCY", "name": "Mercyhurst", "conf": "NEC", "div": "FCS", "color": "#0F4D92", "lat": 42.1158, "lng": -80.0538 },
+  { "id": "MRMK", "name": "Merrimack", "conf": "Independent", "div": "FCS", "color": "#00205B", "lat": 42.6678, "lng": -71.1223 },
+  { "id": "MSVU", "name": "Mississippi Valley State", "conf": "SWAC", "div": "FCS", "color": "#006747", "lat": 33.5186, "lng": -90.3394 },
+  { "id": "MONM", "name": "Monmouth", "conf": "CAA", "div": "FCS", "color": "#003F87", "lat": 40.2787, "lng": -74.0049 },
+  { "id": "MONT", "name": "Montana", "conf": "Big Sky", "div": "FCS", "color": "#76232F", "lat": 46.8617, "lng": -113.9850 },
+  { "id": "MTST", "name": "Montana State", "conf": "Big Sky", "div": "FCS", "color": "#00205B", "lat": 45.6669, "lng": -111.0475 },
+  { "id": "MORE", "name": "Morehead State", "conf": "Pioneer", "div": "FCS", "color": "#005EB8", "lat": 38.1887, "lng": -83.4338 },
+  { "id": "MORG", "name": "Morgan State", "conf": "MEAC", "div": "FCS", "color": "#003087", "lat": 39.3444, "lng": -76.5843 },
+  { "id": "MUR", "name": "Murray State", "conf": "MVFC", "div": "FCS", "color": "#00205B", "lat": 36.6139, "lng": -88.3204 },
+  { "id": "UNH", "name": "New Hampshire", "conf": "CAA", "div": "FCS", "color": "#003087", "lat": 43.1362, "lng": -70.9348 },
+  { "id": "NICH", "name": "Nicholls", "conf": "Southland", "div": "FCS", "color": "#B4112E", "lat": 29.7946, "lng": -90.8038 },
+  { "id": "NORF", "name": "Norfolk State", "conf": "MEAC", "div": "FCS", "color": "#007A33", "lat": 36.8488, "lng": -76.2616 },
+  { "id": "UNA", "name": "North Alabama", "conf": "UAC", "div": "FCS", "color": "#46166B", "lat": 34.8080, "lng": -87.6811 },
+  { "id": "NCAT", "name": "North Carolina A&T", "conf": "CAA", "div": "FCS", "color": "#004684", "lat": 36.0754, "lng": -79.7735 },
+  { "id": "NCCU", "name": "North Carolina Central", "conf": "MEAC", "div": "FCS", "color": "#8B2332", "lat": 35.9754, "lng": -78.8986 },
+  { "id": "UND", "name": "North Dakota", "conf": "MVFC", "div": "FCS", "color": "#009639", "lat": 47.9238, "lng": -97.0722 },
+  { "id": "NDSU", "name": "North Dakota State", "conf": "MVFC", "div": "FCS", "color": "#005833", "lat": 46.8974, "lng": -96.8023 },
+  { "id": "NAU", "name": "Northern Arizona", "conf": "Big Sky", "div": "FCS", "color": "#003366", "lat": 35.1804, "lng": -111.6542 },
+  { "id": "UNCO", "name": "Northern Colorado", "conf": "Big Sky", "div": "FCS", "color": "#013C65", "lat": 40.4042, "lng": -104.7088 },
+  { "id": "UNI", "name": "Northern Iowa", "conf": "MVFC", "div": "FCS", "color": "#4B116F", "lat": 42.5135, "lng": -92.4646 },
+  { "id": "NWST", "name": "Northwestern State", "conf": "Southland", "div": "FCS", "color": "#4F2170", "lat": 31.7486, "lng": -93.0967 },
+  { "id": "PENN", "name": "Pennsylvania", "conf": "Ivy League", "div": "FCS", "color": "#990000", "lat": 39.9515, "lng": -75.1908 },
+  { "id": "PRST", "name": "Portland State", "conf": "Big Sky", "div": "FCS", "color": "#154734", "lat": 45.5115, "lng": -122.6845 },
+  { "id": "PV", "name": "Prairie View A&M", "conf": "SWAC", "div": "FCS", "color": "#4F2170", "lat": 30.0934, "lng": -95.9926 },
+  { "id": "PRE", "name": "Presbyterian", "conf": "Pioneer", "div": "FCS", "color": "#003595", "lat": 34.4646, "lng": -81.8741 },
+  { "id": "PRIN", "name": "Princeton", "conf": "Ivy League", "div": "FCS", "color": "#FF671F", "lat": 40.3453, "lng": -74.6562 },
+  { "id": "URI", "name": "Rhode Island", "conf": "CAA", "div": "FCS", "color": "#68ABE5", "lat": 41.4854, "lng": -71.5303 },
+  { "id": "RICH", "name": "Richmond", "conf": "Patriot", "div": "FCS", "color": "#9E0712", "lat": 37.5756, "lng": -77.5385 },
+  { "id": "RMU", "name": "Robert Morris", "conf": "NEC", "div": "FCS", "color": "#002664", "lat": 40.5218, "lng": -80.2227 },
+  { "id": "SSU", "name": "Sacramento State", "conf": "Big Sky", "div": "FCS", "color": "#00563F", "lat": 38.5635, "lng": -121.4253 },
+  { "id": "SHU", "name": "Sacred Heart", "conf": "Independent", "div": "FCS", "color": "#C90E38", "lat": 41.2227, "lng": -73.2422 },
+  { "id": "SFPA", "name": "Saint Francis (PA)", "conf": "NEC", "div": "FCS", "color": "#C8102E", "lat": 40.5057, "lng": -78.6364 },
+  { "id": "SAM", "name": "Samford", "conf": "SoCon", "div": "FCS", "color": "#003366", "lat": 33.4643, "lng": -86.7909 },
+  { "id": "USD", "name": "San Diego", "conf": "Pioneer", "div": "FCS", "color": "#75B2DD", "lat": 32.7725, "lng": -117.1895 },
+  { "id": "SELA", "name": "SE Louisiana", "conf": "Southland", "div": "FCS", "color": "#006747", "lat": 30.5186, "lng": -90.4678 },
+  { "id": "SCST", "name": "South Carolina State", "conf": "MEAC", "div": "FCS", "color": "#841A2B", "lat": 33.5015, "lng": -80.8465 },
+  { "id": "SDAK", "name": "South Dakota", "conf": "MVFC", "div": "FCS", "color": "#AD0000", "lat": 42.7872, "lng": -96.9248 },
+  { "id": "SDST", "name": "South Dakota State", "conf": "MVFC", "div": "FCS", "color": "#003087", "lat": 44.3195, "lng": -96.7865 },
+  { "id": "SEMO", "name": "Southeast Missouri State", "conf": "Big South-OVC", "div": "FCS", "color": "#C8102E", "lat": 37.3150, "lng": -89.5284 },
+  { "id": "SOU", "name": "Southern", "conf": "SWAC", "div": "FCS", "color": "#005CB9", "lat": 30.5255, "lng": -91.1913 },
+  { "id": "SIU", "name": "Southern Illinois", "conf": "MVFC", "div": "FCS", "color": "#720000", "lat": 37.7126, "lng": -89.2198 },
+  { "id": "SUU", "name": "Southern Utah", "conf": "UAC", "div": "FCS", "color": "#C8102E", "lat": 37.6749, "lng": -113.0699 },
+  { "id": "STMN", "name": "St. Thomas", "conf": "Pioneer", "div": "FCS", "color": "#5D2A82", "lat": 44.9392, "lng": -93.1897 },
+  { "id": "SFA", "name": "Stephen F. Austin", "conf": "Southland", "div": "FCS", "color": "#330066", "lat": 31.6214, "lng": -94.6469 },
+  { "id": "STET", "name": "Stetson", "conf": "Pioneer", "div": "FCS", "color": "#006747", "lat": 29.0347, "lng": -81.3031 },
+  { "id": "STO", "name": "Stonehill", "conf": "NEC", "div": "FCS", "color": "#2C2A29", "lat": 42.0620, "lng": -71.0772 },
+  { "id": "STBK", "name": "Stony Brook", "conf": "CAA", "div": "FCS", "color": "#990000", "lat": 40.9161, "lng": -73.1257 },
+  { "id": "TAR", "name": "Tarleton State", "conf": "UAC", "div": "FCS", "color": "#4F2170", "lat": 32.2152, "lng": -98.2166 },
+  { "id": "TNST", "name": "Tennessee State", "conf": "Big South-OVC", "div": "FCS", "color": "#003087", "lat": 36.1666, "lng": -86.8282 },
+  { "id": "TNTC", "name": "Tennessee Tech", "conf": "Big South-OVC", "div": "FCS", "color": "#4F2170", "lat": 36.1756, "lng": -85.5055 },
+  { "id": "TXSO", "name": "Texas Southern", "conf": "SWAC", "div": "FCS", "color": "#782F40", "lat": 29.7212, "lng": -95.3582 },
+  { "id": "TOW", "name": "Towson", "conf": "CAA", "div": "FCS", "color": "#FFC72C", "lat": 39.3926, "lng": -76.6139 },
+  { "id": "UCD", "name": "UC Davis", "conf": "Big Sky", "div": "FCS", "color": "#002855", "lat": 38.5382, "lng": -121.7617 },
+  { "id": "UTM", "name": "UT Martin", "conf": "Big South-OVC", "div": "FCS", "color": "#00205B", "lat": 36.3411, "lng": -88.8519 },
+  { "id": "RGV", "name": "UT Rio Grande Valley", "conf": "Southland", "div": "FCS", "color": "#F05023", "lat": 26.3054, "lng": -98.1727 },
+  { "id": "UTU", "name": "Utah Tech", "conf": "Big Sky", "div": "FCS", "color": "#BA0C2F", "lat": 37.1041, "lng": -113.5654 },
+  { "id": "VAL", "name": "Valparaiso", "conf": "Pioneer", "div": "FCS", "color": "#613318", "lat": 41.4646, "lng": -87.0425 },
+  { "id": "VILL", "name": "Villanova", "conf": "Patriot", "div": "FCS", "color": "#00205B", "lat": 40.0369, "lng": -75.3426 },
+  { "id": "VMI", "name": "VMI", "conf": "SoCon", "div": "FCS", "color": "#CE1126", "lat": 37.7901, "lng": -79.4392 },
+  { "id": "WAG", "name": "Wagner", "conf": "NEC", "div": "FCS", "color": "#00563F", "lat": 40.6154, "lng": -74.0932 },
+  { "id": "WEB", "name": "Weber State", "conf": "Big Sky", "div": "FCS", "color": "#4B2E83", "lat": 41.1914, "lng": -111.9444 },
+  { "id": "UWG", "name": "West Georgia", "conf": "UAC", "div": "FCS", "color": "#003087", "lat": 33.5750, "lng": -85.1017 },
+  { "id": "WCU", "name": "Western Carolina", "conf": "SoCon", "div": "FCS", "color": "#592C88", "lat": 35.3117, "lng": -83.1818 },
+  { "id": "WIU", "name": "Western Illinois", "conf": "Big South-OVC", "div": "FCS", "color": "#663399", "lat": 40.4687, "lng": -90.6796 },
+  { "id": "W&M", "name": "William & Mary", "conf": "Patriot", "div": "FCS", "color": "#115740", "lat": 37.2707, "lng": -76.7075 },
+  { "id": "WOF", "name": "Wofford", "conf": "SoCon", "div": "FCS", "color": "#8C6D2B", "lat": 34.9604, "lng": -81.9365 },
+  { "id": "YALE", "name": "Yale", "conf": "Ivy League", "div": "FCS", "color": "#00356B", "lat": 41.3111, "lng": -72.9267 },
+  { "id": "YSU", "name": "Youngstown State", "conf": "MVFC", "div": "FCS", "color": "#C8102E", "lat": 41.1042, "lng": -80.6509 }
 ];
 
 const INITIAL_GAMES = []; // Start with a clean slate
@@ -205,7 +332,7 @@ const haversine = (lat1, lon1, lat2, lon2) => {
 const EARTH_RADIUS_MILES = 3958.8;
 
 // CSV Parser Helper
-const parseCSV = (text, teams) => {
+const parseCSV = (text, teamList) => {
   const lines = text.trim().split('\n');
   const games = [];
   
@@ -219,7 +346,7 @@ const parseCSV = (text, teams) => {
       const loserName = parts[2];
 
       const findTeamId = (name) => {
-         const t = teams.find(t => t.name.toLowerCase() === name.toLowerCase() || t.id.toLowerCase() === name.toLowerCase());
+         const t = teamList.find(t => t.name.toLowerCase() === name.toLowerCase() || t.id.toLowerCase() === name.toLowerCase());
          return t ? t.id : null;
       };
 
@@ -236,7 +363,15 @@ const parseCSV = (text, teams) => {
 
 export default function CFBImperialismMap() {
   const [topology, setTopology] = useState(null);
-  const [teams, setTeams] = useState(INITIAL_TEAMS);
+  
+  // New State for Toggle
+  const [subdivision, setSubdivision] = useState('FBS'); // 'FBS' or 'FCS'
+
+  // Derived filtered teams based on mode
+  const teams = useMemo(() => {
+    return ALL_TEAMS.filter(t => t.div === subdivision);
+  }, [subdivision]);
+
   const [games, setGames] = useState(INITIAL_GAMES);
   const [currentWeek, setCurrentWeek] = useState(0); 
   const [playing, setPlaying] = useState(false);
@@ -309,21 +444,21 @@ export default function CFBImperialismMap() {
     return () => unsubscribe();
   }, [user]);
 
-  // Load Topology and Teams
+  // Load Topology
   useEffect(() => {
-    // Load Map
     fetch('https://cdn.jsdelivr.net/npm/us-atlas@3/counties-10m.json')
       .then(res => res.json())
       .then(setTopology)
       .catch(err => console.error("Failed to load map data", err));
-
-    // Set Teams from embedded data
-    setTeams(INITIAL_TEAMS);
-    if(INITIAL_TEAMS.length > 0) {
-        setNewGameWinner(INITIAL_TEAMS[0].id);
-        setNewGameLoser(INITIAL_TEAMS[1].id);
-    }
   }, []);
+
+  // Set default selection when team list changes
+  useEffect(() => {
+    if(teams.length > 0) {
+        setNewGameWinner(teams[0].id);
+        setNewGameLoser(teams[1].id);
+    }
+  }, [teams]);
 
   const countyNeighbors = useMemo(() => {
     if (!topology) return null;
@@ -370,10 +505,17 @@ export default function CFBImperialismMap() {
     if (!initialOwnership) return {};
     
     let ownership = { ...initialOwnership };
-    const gamesToProcess = games.filter(g => g.week <= currentWeek);
-    gamesToProcess.sort((a,b) => a.week - b.week);
+    
+    // Filter games relevant to CURRENT SUBDIVISION only
+    const validGames = games.filter(g => {
+        const winnerInSub = teams.find(t => t.id === g.winner);
+        const loserInSub = teams.find(t => t.id === g.loser);
+        return winnerInSub && loserInSub && g.week <= currentWeek;
+    });
 
-    gamesToProcess.forEach(game => {
+    validGames.sort((a,b) => a.week - b.week);
+
+    validGames.forEach(game => {
       const { winner, loser } = game;
       Object.keys(ownership).forEach(countyId => {
         if (ownership[countyId] === loser) {
@@ -383,7 +525,7 @@ export default function CFBImperialismMap() {
     });
 
     return ownership;
-  }, [initialOwnership, games, currentWeek]);
+  }, [initialOwnership, games, currentWeek, teams]);
 
   const getCountyHistory = (countyId) => {
     if (!initialOwnership || !initialOwnership[countyId]) return [];
@@ -391,9 +533,15 @@ export default function CFBImperialismMap() {
     let owner = initialOwnership[countyId];
     const history = [{ week: 0, owner: owner }];
     
-    const relevantGames = games.filter(g => g.week <= currentWeek).sort((a,b) => a.week - b.week);
+    // Filter games relevant to CURRENT SUBDIVISION only
+    const validGames = games.filter(g => {
+        const winnerInSub = teams.find(t => t.id === g.winner);
+        const loserInSub = teams.find(t => t.id === g.loser);
+        return winnerInSub && loserInSub && g.week <= currentWeek;
+    });
+    validGames.sort((a,b) => a.week - b.week);
     
-    relevantGames.forEach(game => {
+    validGames.forEach(game => {
       if (game.loser === owner) {
         owner = game.winner;
         history.push({ week: game.week, owner: owner });
@@ -692,9 +840,15 @@ export default function CFBImperialismMap() {
   };
 
   const generateWeeklyReport = async () => {
-    const weekGames = games.filter(g => g.week === currentWeek);
+    // Only get games for current subdivision view
+    const weekGames = games.filter(g => {
+        const winnerInSub = teams.find(t => t.id === g.winner);
+        const loserInSub = teams.find(t => t.id === g.loser);
+        return winnerInSub && loserInSub && g.week === currentWeek;
+    });
+
     if (weekGames.length === 0) {
-      setAiReport("No battles were fought this week, so the map remains unchanged.");
+      setAiReport(`No ${subdivision} battles were fought this week, so the map remains unchanged.`);
       return;
     }
 
@@ -707,7 +861,7 @@ export default function CFBImperialismMap() {
     const leaders = leaderboard.slice(0, 3).map(l => `${l.name} (${(l.totalArea/1000).toFixed(0)}k sq mi)`).join(", ");
 
     const prompt = `
-      You are a war correspondent covering a fictional College Football Imperialism map where teams conquer land by winning games.
+      You are a war correspondent covering a fictional College Football Imperialism map for the ${subdivision} division.
       
       Current Week: ${currentWeek}
       The Battles: ${gameSummaries}
@@ -804,8 +958,6 @@ export default function CFBImperialismMap() {
 
   const handleReset = async () => {
     if (!confirm("WARNING: This will delete ALL games from the database. Are you sure?")) return;
-    // Note: In a real app, you'd use a cloud function or batch delete. 
-    // Here we will just delete visible ones one by one (safe for small datasets).
     for (const game of games) {
        if (game.id) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', game.id));
     }
@@ -820,9 +972,9 @@ export default function CFBImperialismMap() {
     const reader = new FileReader();
     reader.onload = async (event) => {
       const text = event.target.result;
-      const newGames = parseCSV(text, teams); // Pass teams to parser
+      // Pass ALL_TEAMS so parser can find ID regardless of current view
+      const newGames = parseCSV(text, ALL_TEAMS); 
       if (newGames.length > 0) {
-         // Batch add to firestore
          let addedCount = 0;
          for (const g of newGames) {
             try {
@@ -839,31 +991,6 @@ export default function CFBImperialismMap() {
     };
     reader.readAsText(file);
     e.target.value = null;
-  };
-
-  const handleExportMapSVG = () => {
-    if (!svgRef.current) return;
-    
-    const clonedSvg = svgRef.current.cloneNode(true);
-    const g = clonedSvg.querySelector('g');
-    if(g) g.removeAttribute('transform'); 
-
-    const serializer = new XMLSerializer();
-    let source = serializer.serializeToString(clonedSvg);
-    
-    if(!source.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)){
-        source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
-    }
-    
-    const blob = new Blob([source], {type: "image/svg+xml;charset=utf-8"});
-    const url = URL.createObjectURL(blob);
-    
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `SimCFB_Imperialism_Map_Week${currentWeek}.svg`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   const handleExportMapPNG = async () => {
@@ -930,7 +1057,7 @@ export default function CFBImperialismMap() {
           const pngUrl = canvas.toDataURL("image/png");
           const link = document.createElement("a");
           link.href = pngUrl;
-          link.download = `SimCFB_Imperialism_Map_Week${currentWeek}.png`;
+          link.download = `SimCFB_Imperialism_Map_${subdivision}_Week${currentWeek}.png`;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
@@ -1006,6 +1133,13 @@ export default function CFBImperialismMap() {
       );
   }
 
+  // Games filtered for display in side panel
+  const displayedGames = [...games].filter(g => {
+      const winnerInSub = teams.find(t => t.id === g.winner);
+      const loserInSub = teams.find(t => t.id === g.loser);
+      return winnerInSub && loserInSub;
+  }).reverse();
+
   return (
     <div className="flex flex-col h-screen bg-slate-100 text-slate-800 font-sans overflow-hidden">
       
@@ -1032,6 +1166,15 @@ export default function CFBImperialismMap() {
              <button onClick={handleToggleAdmin} className={`p-1.5 rounded ${isAdmin ? 'bg-green-600 text-white' : 'text-slate-400 hover:text-white'}`} title="Commissioner Mode">
                {isAdmin ? <Unlock className="w-4 h-4"/> : <Lock className="w-4 h-4"/>}
              </button>
+             
+             {/* MODE TOGGLE */}
+             <button 
+                onClick={() => setSubdivision(s => s === 'FBS' ? 'FCS' : 'FBS')} 
+                className={`ml-2 px-2 rounded font-bold text-xs ${subdivision === 'FBS' ? 'bg-blue-600 text-white' : 'bg-orange-600 text-white'}`}
+                title="Toggle Subdivision"
+             >
+                {subdivision}
+             </button>
           </div>
 
           <div className="relative group">
@@ -1048,9 +1191,6 @@ export default function CFBImperialismMap() {
                 >
                   {isExporting ? <Loader className="w-4 h-4 mr-2 animate-spin" /> : <ImageIcon className="w-4 h-4 mr-2" />} 
                   Map Image (.png)
-                </button>
-                <button onClick={handleExportMapSVG} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
-                  <ImageIcon className="w-4 h-4 mr-2" /> Map Image (.svg)
                 </button>
                 <button onClick={handleExportData} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
                   <FileText className="w-4 h-4 mr-2" /> Game Data (.csv)
@@ -1136,7 +1276,9 @@ export default function CFBImperialismMap() {
             <div className="absolute top-4 left-4 bg-white/90 backdrop-blur p-4 rounded-lg shadow-lg border border-slate-200 w-72 flex flex-col max-h-[80vh] transition-all duration-300">
                 <div className="flex flex-col space-y-2 mb-2 border-b pb-2">
                   <div className="flex justify-between items-center">
-                    <h3 className="text-xs font-bold text-slate-500 uppercase">Territory Leaders</h3>
+                    <h3 className="text-xs font-bold text-slate-500 uppercase">
+                        {subdivision} Leaders
+                    </h3>
                     <div className="flex space-x-1">
                       <button 
                           onClick={() => setLeaderboardEntity(e => e === 'teams' ? 'conferences' : 'teams')}
@@ -1208,7 +1350,9 @@ export default function CFBImperialismMap() {
         {showGamesPanel && (
           <div className="w-96 bg-white border-l border-slate-200 shadow-2xl p-6 overflow-y-auto absolute right-0 top-0 bottom-0 z-20">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-lg font-bold text-slate-800">Match Results</h2>
+              <h2 className="text-lg font-bold text-slate-800">
+                  {subdivision} Results
+              </h2>
               <button onClick={() => setShowGamesPanel(false)} className="text-slate-400 hover:text-slate-600">
                 <ChevronRight />
               </button>
@@ -1227,7 +1371,7 @@ export default function CFBImperialismMap() {
               <>
               <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-100">
                 <h3 className="text-sm font-bold text-green-800 mb-2 flex items-center">
-                  <Unlock className="w-4 h-4 mr-2" /> Commissioner Mode Active
+                  <Unlock className="w-4 h-4 mr-2" /> Commissioner Mode ({subdivision})
                 </h3>
                 <div className="mb-4">
                   <label className="block text-xs font-semibold text-green-700 mb-1">Import Games (CSV)</label>
@@ -1248,7 +1392,7 @@ export default function CFBImperialismMap() {
                 </div>
                 
                 <div className="pt-2 border-t border-green-200">
-                  <h3 className="text-xs font-bold text-green-700 mb-2">Manual Entry</h3>
+                  <h3 className="text-xs font-bold text-green-700 mb-2">Manual Entry ({subdivision})</h3>
                   <div className="space-y-3">
                     <div className="flex space-x-2">
                       <div className="flex-1">
@@ -1278,7 +1422,7 @@ export default function CFBImperialismMap() {
                       onClick={handleAddGame}
                       className="w-full py-2 bg-green-600 text-white rounded text-sm font-medium hover:bg-green-700 transition flex justify-center items-center"
                     >
-                      <Save className="w-4 h-4 mr-1" /> Add Result
+                      <Save className="w-4 h-4 mr-1" /> Add {subdivision} Result
                     </button>
 
                     <button 
@@ -1296,7 +1440,7 @@ export default function CFBImperialismMap() {
 
             <div className="space-y-4">
               <div className="flex justify-between items-center border-b pb-2">
-                 <h3 className="text-sm font-bold text-slate-700">History Log</h3>
+                 <h3 className="text-sm font-bold text-slate-700">{subdivision} History Log</h3>
                  {isAdmin && (
                    <button onClick={handleReset} className="text-xs text-red-500 hover:text-red-700 flex items-center">
                       <RotateCcw className="w-3 h-3 mr-1" /> Clear All
@@ -1323,8 +1467,8 @@ export default function CFBImperialismMap() {
               </div>
               
               <div className="space-y-2">
-                {games.length === 0 && <p className="text-xs text-slate-400 italic">No games recorded yet.</p>}
-                {[...games].reverse().map((g, i) => {
+                {displayedGames.length === 0 && <p className="text-xs text-slate-400 italic">No {subdivision} games recorded.</p>}
+                {displayedGames.map((g, i) => {
                   const winner = teams.find(t => t.id === g.winner);
                   const loser = teams.find(t => t.id === g.loser);
                   return (
