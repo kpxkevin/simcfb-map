@@ -6,7 +6,7 @@ import {
   Play, Pause, ChevronRight, ChevronLeft, Save, RotateCcw, 
   Trophy, Map as MapIcon, Info, Globe, FileText, Download, Sparkles, 
   ScrollText, Search, ZoomIn, ZoomOut, Maximize, Eye, EyeOff, Image as ImageIcon,
-  Users, Layers, Loader, Lock, Unlock, Trash2, RefreshCw
+  Users, Layers, Loader, Lock, Unlock, Trash2
 } from 'lucide-react';
 
 // --- FIREBASE IMPORTS ---
@@ -43,9 +43,6 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 // --- FULL TEAM DATA (FBS + FCS) ---
-// Note: This list is truncated for brevity in this response, but in your real file, 
-// ensure ALL_TEAMS contains the full list we established previously.
-// I am including the full list here to ensure the Canvas is complete.
 const ALL_TEAMS = [
   // --- FBS TEAMS (With Logos) ---
   { "id": "USAF", "name": "Air Force", "conf": "Mountain West", "div": "FBS", "color": "#003087", "lat": 38.9984, "lng": -104.8618, "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/2005.png" },
@@ -551,18 +548,31 @@ export default function CFBImperialismMap() {
   const currentOwnership = useMemo(() => {
     if (!initialOwnership) return {};
     
+    // Week 0 means Preseason: No games processed
+    if (currentWeek === 0) {
+        return { ...initialOwnership };
+    }
+    
     let ownership = { ...initialOwnership };
     
     // Filter games relevant to CURRENT SUBDIVISION only
-    const validGames = games.filter(g => {
+    // Logic: If slider is N, we show results of games from week < N.
+    // Example: Slider 1 -> Show results after Week 0 games.
+    // Slider 2 -> Show results after Week 1 games.
+    const gamesToProcess = games.filter(g => {
         const winnerInSub = teams.find(t => t.id === g.winner);
         const loserInSub = teams.find(t => t.id === g.loser);
-        return winnerInSub && loserInSub && g.week <= currentWeek;
+        
+        // This is the core logic change:
+        // Include games where the game week is strictly LESS than the current slider value.
+        // e.g. Slider 1 -> g.week < 1 (includes Week 0)
+        // Slider 2 -> g.week < 2 (includes Week 0 and Week 1)
+        return winnerInSub && loserInSub && g.week < currentWeek;
     });
 
-    validGames.sort((a,b) => a.week - b.week);
+    gamesToProcess.sort((a,b) => a.week - b.week);
 
-    validGames.forEach(game => {
+    gamesToProcess.forEach(game => {
       const { winner, loser } = game;
       Object.keys(ownership).forEach(countyId => {
         if (ownership[countyId] === loser) {
@@ -578,13 +588,15 @@ export default function CFBImperialismMap() {
     if (!initialOwnership || !initialOwnership[countyId]) return [];
     
     let owner = initialOwnership[countyId];
-    const history = [{ week: 0, owner: owner }];
+    const history = [{ week: 0, owner: owner }]; // Preseason owner
     
+    if (currentWeek === 0) return history;
+
     // Filter games relevant to CURRENT SUBDIVISION only
     const validGames = games.filter(g => {
         const winnerInSub = teams.find(t => t.id === g.winner);
         const loserInSub = teams.find(t => t.id === g.loser);
-        return winnerInSub && loserInSub && g.week <= currentWeek;
+        return winnerInSub && loserInSub && g.week < currentWeek;
     });
     validGames.sort((a,b) => a.week - b.week);
     
@@ -1167,7 +1179,7 @@ export default function CFBImperialismMap() {
     return () => clearInterval(interval);
   }, [playing, games]);
 
-  const maxWeek = Math.max(...games.map(g => g.week), 0);
+  const maxWeek = Math.max(...games.map(g => g.week), 0) + 1; // +1 to allow going to end of current week
 
   if (teams.length === 0) {
       return (
@@ -1200,7 +1212,7 @@ export default function CFBImperialismMap() {
         </div>
         <div className="flex items-center space-x-2 md:space-x-4 text-sm">
           <div className="bg-slate-800 px-3 py-1 rounded-full border border-slate-700 hidden md:block">
-            Current View: <span className="text-yellow-400 font-bold">Week {currentWeek}</span>
+            Current View: <span className="text-yellow-400 font-bold">{currentWeek === 0 ? "Preseason" : `Week ${currentWeek - 1} Results`}</span>
           </div>
           
           <div className="flex bg-slate-800 rounded-lg p-1 border border-slate-700">
@@ -1554,7 +1566,7 @@ export default function CFBImperialismMap() {
             <div className="text-[10px] uppercase text-slate-400 mb-1">Ownership History</div>
             {hoverInfo.history.map((h, i) => (
                <div key={i} className="flex justify-between text-[10px]">
-                 <span className="text-slate-400">Week {h.week}</span>
+                 <span className="text-slate-400">{h.week === 0 ? "Preseason" : `Week ${h.week}`}</span>
                  <span className="font-semibold">{teams.find(t => t.id === h.owner)?.name || h.owner}</span>
                </div>
             ))}
