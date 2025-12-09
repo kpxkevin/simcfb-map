@@ -1,3 +1,4 @@
+/* global __firebase_config, __app_id, __initial_auth_token */
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import * as d3 from 'd3';
 import * as topojson from 'topojson-client';
@@ -5,7 +6,7 @@ import {
   Play, Pause, ChevronRight, ChevronLeft, Upload, Save, RotateCcw, 
   Trophy, Map as MapIcon, Info, Globe, FileText, Download, Sparkles, 
   ScrollText, Search, ZoomIn, ZoomOut, Maximize, Eye, EyeOff, Image as ImageIcon,
-  Users, Layers, Loader, Lock, Unlock, Trash2, RefreshCw
+  Users, Layers, Loader, Lock, Unlock, Trash2
 } from 'lucide-react';
 
 // --- FIREBASE IMPORTS ---
@@ -18,16 +19,14 @@ let firebaseConfig;
 let appId;
 
 try {
-  // eslint-disable-next-line no-undef
   if (typeof __firebase_config !== 'undefined') {
-    // eslint-disable-next-line no-undef
     firebaseConfig = JSON.parse(__firebase_config);
-    // eslint-disable-next-line no-undef
     appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
   } else {
     throw new Error('Sandbox config not found');
   }
 } catch (e) {
+  // FALLBACK FOR GITHUB ACTIONS / PRODUCTION
   firebaseConfig = { 
     apiKey: "demo-key", 
     authDomain: "demo.firebaseapp.com", 
@@ -409,7 +408,9 @@ export default function CFBImperialismMap() {
   // 1. Auth Init
   useEffect(() => {
     const initAuth = async () => {
+      // eslint-disable-next-line no-undef
       if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+        // eslint-disable-next-line no-undef
         await signInWithCustomToken(auth, __initial_auth_token);
       } else {
         await signInAnonymously(auth);
@@ -1191,6 +1192,9 @@ export default function CFBImperialismMap() {
                 >
                   {isExporting ? <Loader className="w-4 h-4 mr-2 animate-spin" /> : <ImageIcon className="w-4 h-4 mr-2" />} 
                   Map Image (.png)
+                </button>
+                <button onClick={handleExportMapSVG} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                  <ImageIcon className="w-4 h-4 mr-2" /> Map Image (.svg)
                 </button>
                 <button onClick={handleExportData} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
                   <FileText className="w-4 h-4 mr-2" /> Game Data (.csv)
