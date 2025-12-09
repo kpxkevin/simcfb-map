@@ -13,20 +13,40 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
 import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
 
-// --- FIREBASE SETUP ---
-// specific check to see if we are in the Preview environment
-const isPreviewEnv = typeof __firebase_config !== 'undefined';
+// --- FIREBASE SETUP (BUILD SAFE) ---
+// This logic prevents the build from failing on GitHub where sandbox variables are missing.
+let firebaseConfig;
+let appId;
 
-// If in preview, use the injected config. If on GitHub (production), use your own keys
-// You will eventually need to replace the 'null' below with your actual Firebase config object from the Firebase Console
-const firebaseConfig = isPreviewEnv 
-  ? JSON.parse(__firebase_config) 
-  : { apiKey: "demo-key", authDomain: "demo.firebaseapp.com", projectId: "demo" }; // Placeholder to let build pass
+try {
+  // Check if we are in the Preview Environment (Sandbox)
+  // eslint-disable-next-line no-undef
+  if (typeof __firebase_config !== 'undefined') {
+    // eslint-disable-next-line no-undef
+    firebaseConfig = JSON.parse(__firebase_config);
+    // eslint-disable-next-line no-undef
+    appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+  } else {
+    throw new Error('Sandbox config not found');
+  }
+} catch (e) {
+  // FALLBACK FOR GITHUB ACTIONS / PRODUCTION
+  // The build will use these placeholders to compile successfully.
+  // Note: Database features won't work on the live site until you add your real config here.
+  firebaseConfig = { 
+    apiKey: "demo-key", 
+    authDomain: "demo.firebaseapp.com", 
+    projectId: "demo",
+    storageBucket: "demo.appspot.com",
+    messagingSenderId: "00000",
+    appId: "1:0000:web:0000"
+  };
+  appId = 'simcfb-live';
+}
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'simcfb-map-v1';
 
 // --- EMBEDDED TEAM DATA (STRICTLY FBS ONLY) ---
 const INITIAL_TEAMS = [
