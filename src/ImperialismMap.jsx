@@ -334,19 +334,28 @@ const parseCSV = (text, teamList) => {
   const lines = text.trim().split('\n');
   const games = [];
   
+  // Basic heuristic to skip header: if first line starts with "week" (case-insensitive)
   const startIndex = lines[0].toLowerCase().startsWith('week') ? 1 : 0;
 
   for (let i = startIndex; i < lines.length; i++) {
+    // Only process non-empty lines
+    if (!lines[i].trim()) continue;
+
     const parts = lines[i].split(',').map(p => p.trim());
     if (parts.length >= 3) {
-      const week = parseInt(parts[0]);
+      const weekStr = parts[0];
       const winnerName = parts[1];
       const loserName = parts[2];
+      
+      const week = parseInt(weekStr);
 
+      // Helper to find team ID by either name or ID, case-insensitive
       const findTeamId = (name) => {
+         if (!name) return null;
+         const normalizedName = name.toLowerCase();
          const t = teamList.find(t => 
-           t.name.toLowerCase() === name.toLowerCase() || 
-           t.id.toLowerCase() === name.toLowerCase()
+           t.name.toLowerCase() === normalizedName || 
+           t.id.toLowerCase() === normalizedName
          );
          return t ? t.id : null;
       };
@@ -357,7 +366,7 @@ const parseCSV = (text, teamList) => {
       if (winnerId && loserId && !isNaN(week)) {
         games.push({ week, winner: winnerId, loser: loserId });
       } else {
-        console.warn(`Could not parse line ${i}: ${lines[i]}`);
+        console.warn(`Skipping invalid line ${i + 1}: ${lines[i]} (WinnerID: ${winnerId}, LoserID: ${loserId})`);
       }
     }
   }
@@ -995,7 +1004,7 @@ export default function CFBImperialismMap() {
       }
     };
     reader.readAsText(file);
-    e.target.value = null;
+    e.target.value = null; // Reset input
   };
 
   const handleExportMapPNG = async () => {
