@@ -344,7 +344,10 @@ const parseCSV = (text, teamList) => {
       const loserName = parts[2];
 
       const findTeamId = (name) => {
-         const t = teamList.find(t => t.name.toLowerCase() === name.toLowerCase() || t.id.toLowerCase() === name.toLowerCase());
+         const t = teamList.find(t => 
+           t.name.toLowerCase() === name.toLowerCase() || 
+           t.id.toLowerCase() === name.toLowerCase()
+         );
          return t ? t.id : null;
       };
 
@@ -353,6 +356,8 @@ const parseCSV = (text, teamList) => {
 
       if (winnerId && loserId && !isNaN(week)) {
         games.push({ week, winner: winnerId, loser: loserId });
+      } else {
+        console.warn(`Could not parse line ${i}: ${lines[i]}`);
       }
     }
   }
