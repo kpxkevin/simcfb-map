@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import * as d3 from 'd3';
 import * as topojson from 'topojson-client';
 import { 
-  Play, Pause, ChevronRight, ChevronLeft, Upload, Save, RotateCcw, 
+  Play, Pause, ChevronRight, ChevronLeft, Save, RotateCcw, 
   Trophy, Map as MapIcon, Info, Globe, FileText, Download, Sparkles, 
   ScrollText, Search, ZoomIn, ZoomOut, Maximize, Eye, EyeOff, Image as ImageIcon,
   Users, Layers, Loader, Lock, Unlock, Trash2
@@ -1192,9 +1192,6 @@ export default function CFBImperialismMap() {
                 >
                   {isExporting ? <Loader className="w-4 h-4 mr-2 animate-spin" /> : <ImageIcon className="w-4 h-4 mr-2" />} 
                   Map Image (.png)
-                </button>
-                <button onClick={handleExportMapSVG} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
-                  <ImageIcon className="w-4 h-4 mr-2" /> Map Image (.svg)
                 </button>
                 <button onClick={handleExportData} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
                   <FileText className="w-4 h-4 mr-2" /> Game Data (.csv)
